@@ -23,8 +23,7 @@ func init() {
 // multiple fetch calls.
 type MetricSet struct {
 	mb.BaseMetricSet
-        pool *rados.IOContext
-	poolName string
+	cluster *rados.Conn
 }
 
 // New create a new instance of the MetricSet
@@ -37,10 +36,8 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 	//                    and osd endpoints, path to keyring, etc.
 	config := struct{
 		ClusterConfPath string `config:"cluster_conf_path"`
-		PoolName string `config:"pool_name"`
 	}{
 		ClusterConfPath: "/etc/ceph/cluster.conf",
-		PoolName: "rbd",
 	}
 
 	if err := base.Module().UnpackConfig(&config); err != nil {
@@ -51,38 +48,61 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 	logp.Info("Cluster configuration path: %s", config.ClusterConfPath)
 	logp.Info("Connection to Ceph cluster...")
 	conn, _ := rados.NewConn()
-        conn.ReadConfigFile(config.ClusterConfPath)
-        if conn.Connect() != nil {
-                logp.Err("Unable to connect cluster")
-        }
-
-	// Open a pool IOContext
-	ioctx, err := conn.OpenIOContext(config.PoolName)
-	if err != nil {
-		logp.Err("Unable to open IOContext of pool %s", config.PoolName)
-	}
+  conn.ReadConfigFile(config.ClusterConfPath)
+  if conn.Connect() != nil {
+    logp.Err("Unable to connect cluster")
+  }
 
 	return &MetricSet{
 		BaseMetricSet: base,
-		pool: ioctx,
-		poolName: config.PoolName,
+		cluster: conn,
 	}, nil
 }
 
 // Fetch methods implements the data gathering and data conversion to the right format
 // It returns the event which is then forward to the output. In case of an error, a
 // descriptive error must be returned.
-func (m *MetricSet) Fetch() (common.MapStr, error) {
+func (m *MetricSet) Fetch() ([]common.MapStr, error) {
 
-	logp.Info("Fetch POOLS called")
-	stats, err := m.pool.GetPoolStats()
+	// Wait for the latest OSD map.
+	// If we don't do it, the list of pools will be unconsistent.
+	if m.cluster.WaitForLatestOSDMap() != nil {
+		logp.Err("Unable to wait for latest OSD map")
+	}
+
+	// List pools
+	pools, err := m.cluster.ListPools()
 	if err != nil {
-		logp.Err("Unable to get stats")
+		logp.Err("Unable to get pools")
 	}
 
-	event := common.MapStr{
-		m.poolName: stats,
+	// Get stats on each pool
+	events := make([]common.MapStr, len(pools))
+	i := 0
+	for _,pool_name := range pools {
+
+		// Open a pool IOContext
+		ioctx, err := m.cluster.OpenIOContext(pool_name)
+		if err != nil {
+			logp.Err("Unable to open IOContext of pool %s", pool_name)
+		}
+
+		// Get pool stats
+		stats, err := ioctx.GetPoolStats()
+		if err != nil {
+			logp.Err("Unable to get stats")
+		}
+
+		event := common.MapStr{
+			"pool_name": pool_name,
+			"stats": stats,
+		}
+
+		events[i] = event
+		i += 1
 	}
 
-	return event, nil
+	logp.Info("Stats of %d pools fetched", len(pools))
+
+	return events, nil
 }

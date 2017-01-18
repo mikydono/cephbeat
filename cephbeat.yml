@@ -17,8 +17,24 @@ cephbeat.modules:
     period: 1s
     hosts: ["localhost"]
     cluster_conf_path: "/etc/ceph/main.conf"
-    pool_name: "pool"
 
 output.elasticsearch:
   hosts: ["localhost:9200"]
 
+#================================ Logging =====================================
+
+# Sets log level. The default log level is error.
+# Available log levels are: critical, error, warning, info, debug
+logging.level: info
+
+# At debug level, you can selectively enable logging only for some components.
+# To enable all selectors use ["*"]. Examples of other selectors are "beat",
+# "publish", "service".
+#logging.selectors: ["*"]
+
+logging.to_files: true
+logging.to_syslog: false
+logging.files:
+  path: logs
+  name: cephbeat.log
+  keepfiles: 7
