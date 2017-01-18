@@ -1,0 +1,6 @@
+- module: cluster
+  metricsets: ["mon"]
+  enabled: true
+  period: 1s
+  hosts: ["localhost"]
+

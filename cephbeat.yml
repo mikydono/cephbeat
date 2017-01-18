@@ -1,0 +1,24 @@
+###################### Cephbeat Configuration Example #######################
+
+# This file is an example configuration file highlighting only the most common
+# options. The metricbeat.full.yml file from the same directory contains all the
+# supported options with more comments. You can use it as a reference.
+#
+# You can find the full configuration reference here:
+# https://www.elastic.co/guide/en/beats/metricbeat/index.html
+
+#==========================  Modules configuration ============================
+cephbeat.modules:
+
+#------------------------------- cluster Module ------------------------------
+  - module: cluster
+    metricsets: ["cluster", "pools"]
+    enabled: true
+    period: 1s
+    hosts: ["localhost"]
+    cluster_conf_path: "/etc/ceph/main.conf"
+    pool_name: "pool"
+
+output.elasticsearch:
+  hosts: ["localhost:9200"]
+

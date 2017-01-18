@@ -1,0 +1,9 @@
+- key: cluster
+  title: "cluster"
+  description: >
+    cluster Module
+  fields:
+    - name: cluster
+      type: group
+      description: >
+      fields:

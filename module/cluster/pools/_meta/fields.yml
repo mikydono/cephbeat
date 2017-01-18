@@ -1,0 +1,9 @@
+- name: pools
+  type: group
+  description: >
+    pools
+  fields:
+    - name: example
+      type: keyword
+      description: >
+        Example field

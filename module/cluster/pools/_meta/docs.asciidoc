@@ -1,0 +1,3 @@
+=== cluster pools MetricSet
+
+This is the pools metricset of the module cluster.

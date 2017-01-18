@@ -1,0 +1,21 @@
+########################## Cephbeat Configuration ###########################
+
+# This file is a full configuration example documenting all non-deprecated
+# options in comments. For a shorter configuration example, that contains only
+# the most common options, please see metricbeat.yml in the same directory.
+#
+# You can find the full configuration reference here:
+# https://www.elastic.co/guide/en/beats/metricbeat/index.html
+
+#==========================  Modules configuration ============================
+cephbeat.modules:
+
+#------------------------------- cluster Module ------------------------------
+- module: cluster
+  metricsets: ["mon"]
+  enabled: true
+  period: 1s
+  hosts: ["localhost"]
+
+
+

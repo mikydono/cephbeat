@@ -1,0 +1,41 @@
+////
+This file is generated! See scripts/docs_collector.py
+////
+
+[[metricbeat-module-cluster]]
+== cluster Module
+
+This is the cluster Module.
+
+
+
+[float]
+=== Example Configuration
+
+The cluster module supports the standard configuration options that are described
+in <<configuration-metricbeat>>. Here is an example configuration:
+
+[source,yaml]
+----
+cephbeat.modules:
+- module: cluster
+  metricsets: ["cluster"]
+  enabled: true
+  period: 1s
+  hosts: ["localhost"]
+
+----
+
+[float]
+=== Metricsets
+
+The following metricsets are available:
+
+* <<metricbeat-metricset-cluster-cluster,cluster>>
+
+* <<metricbeat-metricset-cluster-pools,pools>>
+
+include::cluster/cluster.asciidoc[]
+
+include::cluster/pools.asciidoc[]
+
