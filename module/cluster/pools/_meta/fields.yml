@@ -1,9 +1,65 @@
 - name: pools
+  title: "Pools"
   type: group
   description: >
-    pools
+    Pools metrics, like number of objects, degraded objects...
   fields:
-    - name: example
-      type: keyword
+    - name: pool_name
+      type: string
       description: >
-        Example field
+        Name of analyzed pool
+
+    - name: stats
+      type: group
+      description: >
+        Pool metrics
+      fields:
+        - name: Num_bytes
+          type: integer
+          description: >
+            Total bytes
+        - name: Num_kb
+          type: integer
+          description: >
+            Total kilobytes
+        - name: Num_object_clones
+          type: integer
+          description: >
+            Number of cloned objects
+        - name: Num_object_copies
+          type: integer
+          description: >
+            Number of copied objects
+        - name: Num_objects
+          type: integer
+          description: >
+            Total number of objects
+        - name: Num_objects_degraded
+          type: integer
+          description: >
+            Number of degraded objects
+        - name: Num_objects_missing_on_primary
+          type: integer
+          description: >
+            Number of objects missing on primary
+        - name: Num_objects_unfound
+          type: integer
+          description: >
+            Number of unfound objects
+        - name: Num_rd
+          type: integer
+          description: >
+            Number of rd
+        - name: Num_rd_kb
+          type: integer
+          description: >
+            Number of rd kilobytes
+        - name: Num_wr
+          type: integer
+          description: >
+            Number of wr
+        - name: Num_wr_kb
+          type: integer
+          description: >
+            Number of wr kilobytes
+

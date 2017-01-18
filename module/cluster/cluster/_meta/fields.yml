@@ -1,9 +1,37 @@
 - name: cluster
+  title: "Cluster"
   type: group
   description: >
-    cluster
+    Ceph cluster metrics, like available and used space, number of pools...
   fields:
-    - name: example
-      type: keyword
+    - name: stats
+      type: group
       description: >
-        Example field
+        The cluster stats (available space, ...)
+      fields:
+        - name: Kb
+          type: integer
+          description: >
+            The total space
+        - name: Kb_avail
+          type: integer
+          description: >
+            The total available space
+        - name: Kb_used
+          type: integer
+          description: >
+            The total used space
+        - name: Num_objects
+          type: integer
+          description: >
+            The number of objects in the cluster
+
+    - name: fsid
+      type: string
+      description: >
+	The unique cluster ID
+
+    - name: pools
+      type: string
+      description: >
+        The list of pools
