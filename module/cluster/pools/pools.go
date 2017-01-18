@@ -23,14 +23,7 @@ func init() {
 // multiple fetch calls.
 type MetricSet struct {
 	mb.BaseMetricSet
-  pool *rados.IOContext
-	poolName string
 	cluster *rados.Conn
-	clusterConfPath string
-}
-
-type tag struct {
-	poolName string
 }
 
 // New create a new instance of the MetricSet
@@ -43,10 +36,8 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 	//                    and osd endpoints, path to keyring, etc.
 	config := struct{
 		ClusterConfPath string `config:"cluster_conf_path"`
-		PoolName string `config:"pool_name"`
 	}{
 		ClusterConfPath: "/etc/ceph/cluster.conf",
-		PoolName: "rbd",
 	}
 
 	if err := base.Module().UnpackConfig(&config); err != nil {
@@ -57,23 +48,14 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 	logp.Info("Cluster configuration path: %s", config.ClusterConfPath)
 	logp.Info("Connection to Ceph cluster...")
 	conn, _ := rados.NewConn()
-        conn.ReadConfigFile(config.ClusterConfPath)
-        if conn.Connect() != nil {
-                logp.Err("Unable to connect cluster")
-        }
-
-	// Open a pool IOContext
-	ioctx, err := conn.OpenIOContext(config.PoolName)
-	if err != nil {
-		logp.Err("Unable to open IOContext of pool %s", config.PoolName)
-	}
+  conn.ReadConfigFile(config.ClusterConfPath)
+  if conn.Connect() != nil {
+    logp.Err("Unable to connect cluster")
+  }
 
 	return &MetricSet{
 		BaseMetricSet: base,
-		pool: ioctx,
-		poolName: config.PoolName,
 		cluster: conn,
-		clusterConfPath: config.ClusterConfPath,
 	}, nil
 }
 
@@ -82,23 +64,17 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 // descriptive error must be returned.
 func (m *MetricSet) Fetch() ([]common.MapStr, error) {
 
-	// Because of a mysterious behavour of ListPools method,
-	// we have to initiate a new connection to the Ceph cluster
-	// for every Fetch. If we don't do it, ListPools does not
-	// return new created pools.
-	logp.Info("Connection to Ceph cluster...")
-	conn, _ := rados.NewConn()
-				conn.ReadConfigFile(m.clusterConfPath)
-				if conn.Connect() != nil {
-								logp.Err("Unable to connect cluster")
-				}
+	// Wait for the latest OSD map.
+	// If we don't do it, the list of pools will be unconsistent.
+	if m.cluster.WaitForLatestOSDMap() != nil {
+		logp.Err("Unable to wait for latest OSD map")
+	}
 
 	// List pools
-	pools, err := conn.ListPools()
+	pools, err := m.cluster.ListPools()
 	if err != nil {
 		logp.Err("Unable to get pools")
 	}
-	logp.Info("%s", pools)
 
 	// Get stats on each pool
 	events := make([]common.MapStr, len(pools))
@@ -106,7 +82,7 @@ func (m *MetricSet) Fetch() ([]common.MapStr, error) {
 	for _,pool_name := range pools {
 
 		// Open a pool IOContext
-		ioctx, err := conn.OpenIOContext(pool_name)
+		ioctx, err := m.cluster.OpenIOContext(pool_name)
 		if err != nil {
 			logp.Err("Unable to open IOContext of pool %s", pool_name)
 		}
@@ -125,6 +101,8 @@ func (m *MetricSet) Fetch() ([]common.MapStr, error) {
 		events[i] = event
 		i += 1
 	}
+
+	logp.Info("Stats of %d pools fetched", len(pools))
 
 	return events, nil
 }

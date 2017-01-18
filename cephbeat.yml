@@ -17,7 +17,6 @@ cephbeat.modules:
     period: 1s
     hosts: ["localhost"]
     cluster_conf_path: "/etc/ceph/main.conf"
-    pool_name: "pool"
 
 output.elasticsearch:
   hosts: ["localhost:9200"]
