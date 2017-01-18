@@ -23,7 +23,13 @@ func init() {
 // multiple fetch calls.
 type MetricSet struct {
 	mb.BaseMetricSet
-        pool *rados.IOContext
+  pool *rados.IOContext
+	poolName string
+	cluster *rados.Conn
+	clusterConfPath string
+}
+
+type tag struct {
 	poolName string
 }
 
@@ -66,23 +72,59 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 		BaseMetricSet: base,
 		pool: ioctx,
 		poolName: config.PoolName,
+		cluster: conn,
+		clusterConfPath: config.ClusterConfPath,
 	}, nil
 }
 
 // Fetch methods implements the data gathering and data conversion to the right format
 // It returns the event which is then forward to the output. In case of an error, a
 // descriptive error must be returned.
-func (m *MetricSet) Fetch() (common.MapStr, error) {
+func (m *MetricSet) Fetch() ([]common.MapStr, error) {
 
-	logp.Info("Fetch POOLS called")
-	stats, err := m.pool.GetPoolStats()
+	// Because of a mysterious behavour of ListPools method,
+	// we have to initiate a new connection to the Ceph cluster
+	// for every Fetch. If we don't do it, ListPools does not
+	// return new created pools.
+	logp.Info("Connection to Ceph cluster...")
+	conn, _ := rados.NewConn()
+				conn.ReadConfigFile(m.clusterConfPath)
+				if conn.Connect() != nil {
+								logp.Err("Unable to connect cluster")
+				}
+
+	// List pools
+	pools, err := conn.ListPools()
 	if err != nil {
-		logp.Err("Unable to get stats")
+		logp.Err("Unable to get pools")
+	}
+	logp.Info("%s", pools)
+
+	// Get stats on each pool
+	events := make([]common.MapStr, len(pools))
+	i := 0
+	for _,pool_name := range pools {
+
+		// Open a pool IOContext
+		ioctx, err := conn.OpenIOContext(pool_name)
+		if err != nil {
+			logp.Err("Unable to open IOContext of pool %s", pool_name)
+		}
+
+		// Get pool stats
+		stats, err := ioctx.GetPoolStats()
+		if err != nil {
+			logp.Err("Unable to get stats")
+		}
+
+		event := common.MapStr{
+			"pool_name": pool_name,
+			"stats": stats,
+		}
+
+		events[i] = event
+		i += 1
 	}
 
-	event := common.MapStr{
-		m.poolName: stats,
-	}
-
-	return event, nil
+	return events, nil
 }
